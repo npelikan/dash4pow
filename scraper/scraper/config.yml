@@ -1,0 +1,12 @@
+sensors:
+  - name: Temperature
+    code: TOBS
+  - name: Snow Depth
+    code: SNWD
+  - name: Snow Water Equivalent
+    code: WTEQ
+sites:
+  - name: Brighton, UT
+    code: 366:UT:SNTL
+  - name: Snowbird, UT
+    code: 766:UT:SNTL

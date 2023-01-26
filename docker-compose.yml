@@ -1,0 +1,6 @@
+version: '0.0.1'
+services:
+  scraper:
+    build: scraper/.
+  db:
+    image: postgres:alpine
