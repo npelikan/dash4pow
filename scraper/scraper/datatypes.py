@@ -18,9 +18,8 @@ class SnotelStation(Base):
 class SnotelObservation(Base):
     __tablename__ = "snotel_observations"
 
-    id: Mapped[int] = mapped_column(primary_key = True)
-    station_id: Mapped[int] = mapped_column(ForeignKey("snotel_stations.id"))
-    datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    station_id: Mapped[int] = mapped_column(ForeignKey("snotel_stations.id"), primary_key=True)
+    datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     air_temp: Mapped[float]
     snow_depth: Mapped[float]
     snow_water_eq: Mapped[float]
@@ -38,9 +37,8 @@ class WxStation(Base):
 class WxObservation(Base):
     __tablename__ = "wx_observations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
-    station_id: Mapped[int] = mapped_column(ForeignKey("snotel_stations.id"))
-    datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    station_id: Mapped[int] = mapped_column(ForeignKey("snotel_stations.id"), primary_key=True)
+    datetime: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     air_temp: Mapped[float]
     wind_gust: Mapped[float]
     wind_direction: Mapped[float]
