@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+scraper/scraper/Untitled.ipynb
+
+.idea/

@@ -1,6 +1,21 @@
 version: '0.0.1'
+
 services:
+
   scraper:
     build: scraper/.
+  
   db:
     image: postgres:alpine
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=dockerpw
+      - POSTGRES_DB=wx
+
+volumes:
+  db-data: 
+    driver: local

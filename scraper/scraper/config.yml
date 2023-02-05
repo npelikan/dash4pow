@@ -1,12 +1,28 @@
-sensors:
-  - name: Temperature
-    code: TOBS
-  - name: Snow Depth
-    code: SNWD
-  - name: Snow Water Equivalent
-    code: WTEQ
-sites:
-  - name: Brighton, UT
-    code: 366:UT:SNTL
-  - name: Snowbird, UT
-    code: 766:UT:SNTL
+snotel:
+  sensors:
+    - name: air_temp
+      code: TOBS
+    - name: snow_depth
+      code: SNWD
+    - name: snow_water_eq
+      code: WTEQ
+  sites:
+    - name: Brighton, UT
+      code: 366:UT:SNTL
+    - name: Snowbird, UT
+      code: 766:UT:SNTL
+    - name: Mill D, UT
+      code: 628:UT:SNTL
+    - 
+wx:
+  sites:
+    - iff
+    - rey
+    - c99
+  sensors:
+    - "wind_gust"
+    - "wind_direction"
+    - "relative_humidity"
+    - "wind_speed"
+    - "air_temp"
+    - "solar_radiation"

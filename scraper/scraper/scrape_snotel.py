@@ -1,15 +1,15 @@
 import zeep
 import pandas as pd
-import yaml
 from functools import reduce
-from pathlib import Path
+from .config import get_config
 
-fp = Path(__file__).parent
 
-with open(fp / "config.yml", "r") as f:
-    config = yaml.load(f, Loader=yaml.Loader)
+snotel_config = get_config()["snotel"]
 
-client = zeep.Client("https://wcc.sc.egov.usda.gov/awdbWebService/services?WSDL")
+try:
+    client = zeep.Client("https://wcc.sc.egov.usda.gov/awdbWebService/services?WSDL")
+except HTTPError:
+    print("snotel service borked!")
 
 
 def filter_valdict(d):
@@ -27,8 +27,8 @@ def process_site(i, sensor_code):
     return df
 
 
-def get_single_sensor_data(site_codes, sensor_code, start_date, end_date):
-    resp = client.service.getHourlyData(
+def get_single_sensor_data(snotel_client, site_codes, sensor_code, start_date, end_date):
+    resp = snotel_client.service.getHourlyData(
         stationTriplets=site_codes,
         elementCd=sensor_code,
         ordinal=1,
@@ -39,16 +39,16 @@ def get_single_sensor_data(site_codes, sensor_code, start_date, end_date):
     return pd.concat((process_site(x, sensor_code=sensor_code) for x in resp))
 
 
-def get_snotel_data(site_codes, start_date, end_date):
-    sensors = ["TOBS",  "SNWD", "WTEQ"]
-
+def get_snotel_data(snotel_client, site_codes, sensor_codes, start_date, end_date):
     dfl = (
         get_single_sensor_data(
+            snotel_client,
             sensor_code=x,
             site_codes=site_codes,
             start_date=start_date,
             end_date=end_date
-        ) for x in sensors
+        ) for x in sensor_codes
     )
 
-    out_df = reduce(lambda l, r: pd.merge(l, r, left_index=True, right_index=True), dfl)
+    return reduce(lambda l, r: pd.merge(l, r, left_index=True, right_index=True), dfl)
+
