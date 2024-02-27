@@ -1,6 +1,7 @@
 import requests
 import os
 import pandas as pd
+import plotly.express as px
 
 url = "https://api.synopticdata.com/v2/stations/timeseries"
 
@@ -20,7 +21,22 @@ def get_station_series(i):
     return df
 
 ss = pd.concat((get_station_series(x) for x in j["STATION"]))
-ss = ss.set_index(["station", "date_time"])
+
+cyn = ss[ss.station == "Canyons - 9990"]
+
+bins_mag = [0, 1, 2, 3, 4, 5, 6, 999]
+bins_mag_labels = ["0-1", "1-2", "2-3", "3-4", "4-5", "5-6", "6+"]
+
+cyn["mag_binned"] = pd.cut(cyn.wind_speed_set_1, bins_mag, labels=bins_mag_labels)
+cyn["dir_binned"] = pd.Categorical(cyn.wind_cardinal_direction_set_1d, categories=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'], ordered=False)
+
+keepcols = ["mag_binned", "dir_binned"]
+dfe = cyn[keepcols].groupby(keepcols, as_index=False).size()
+dfe["frequency"] = dfe["size"] / (dfe["size"].sum())
+
+
+
+px.bar_polar(cyn, r="wind_speed_set_1", theta="wind_direction_set_1")
 
 for pfx in dataseries:
     matchcols = [x for x in ss.columns if x.startswith(pfx)]

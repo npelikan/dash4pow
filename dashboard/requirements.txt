@@ -1,0 +1,8 @@
+plotly
+pandas
+shiny
+requests
+zeep
+shinywidgets
+pins
+pyarrow

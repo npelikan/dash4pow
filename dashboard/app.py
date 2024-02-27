@@ -1,5 +1,5 @@
 import plotly.express as px
-
+from pathlib import Path
 import pandas as pd
 
 from shiny import reactive
@@ -7,134 +7,60 @@ from shiny.express import input, render, ui
 from shinywidgets import render_plotly, render_widget
 
 import requests
-import zeep
 from snotel_helpers import get_snotel_data
 import pandas as pd
+import pins
+import dotenv
 import os
 
-site_config = {
-    "BCC": {
-        "snotel_sites": {
-            "366:UT:SNTL": "Brighton, UT",
-            "628:UT:SNTL": "Mill D, UT",
-        },
-        "wx_stations": {
-            "C99": "Canyons - 9990",
-            "REY": "Reynolds Peak",
-            "UTCDF": "Cardiff Trailhead",
-            "PC056": "Brighton",
-        },
-    },
-    "LCC": {
-        "snotel_sites": {
-            "766:UT:SNTL": "Snowbird, UT",
-            "1308:UT:SNTL": "Atwater Plot, UT",
-        },
-        "wx_stations": {
-            "IFF": "Cardiff Peak",
-            "PC064": "Albion Basin",
-            "AMB": "Alta - Baldy",
-            "HP": "Hidden Peak",
-        },
-    },
-    "PC": {
-        "snotel_sites": {
-            "814:UT:SNTL": "Thaynes Canyon, UT",
-        },
-        "wx_stations": {
-            "C99": "Canyons - 9990",
-            "CDYBK": "Canyons - Daybreak",
-            "REY": "Reynolds Peak",
-        },
-    },
-}
+dotenv.load_dotenv(Path(__file__).absolute().parent / ".env")
 
-station_ids = {}
-snotel_sites = {}
-for d in site_config.values():
-    station_ids = station_ids | d["wx_stations"]
-    snotel_sites = snotel_sites | d["snotel_sites"]
+board = pins.board_connect(
+    server_url=os.getenv("CONNECT_SERVER"), api_key=os.getenv("CONNECT_API_KEY")
+)
 
-# station_ids = {
-#     "C99": "Canyons - 9990",
-#     "CDYBK": "Canyons - Daybreak",
-#     "IFF": "Cardiff Peak",
-#     "REY": "Reynolds Peak",
-#     "UTCDF": "Cardiff Trailhead",
-#     "PC056": "Brighton",
-#     "PC064": "Albion Basin",
-# }
+# Pin config
+SNOTEL_PIN_NAME = "nick.pelikan/snotel_data"
+WX_PIN_NAME = "nick.pelikan/wx_data"
 
-# snotel_sites = {
-#     "366:UT:SNTL": "Brighton, UT",
-#     "766:UT:SNTL": "Snowbird, UT",
-#     "628:UT:SNTL": "Mill D, UT",
-#     "814:UT:SNTL": "Thaynes Canyon, UT",
-#     "1308:UT:SNTL": "Atwater Plot, UT"
-# }
-
-snotel_sensors = {
-    "TOBS": "Air Temperature (F)",
-    "SNWD": "Snow Depth (in)",
-    "WTEQ": "Snow Water Eq (in)",
-}
+site_config = board.pin_read("nick.pelikan/snow_sites")
 
 ui.page_opts(fillable=True)
 
 
-def forecast_data():
-    resp = requests.get("https://utahavalanchecenter.org/forecast/salt-lake/json")
-    j = resp.json()
-    return j["advisories"][0]["advisory"]
+forecast_r = requests.get("https://utahavalanchecenter.org/forecast/salt-lake/json")
+forecast = forecast_r.json()["advisories"][0]["advisory"]
+
+snotel_raw = board.pin_read(SNOTEL_PIN_NAME)
+wx_raw = board.pin_read(WX_PIN_NAME)
 
 
-def get_station_series(i):
-    df = pd.DataFrame(i["OBSERVATIONS"])
-    df["date_time"] = pd.to_datetime(df["date_time"]).dt.tz_convert(tz="America/Denver")
-    df["station"] = i["NAME"]
-    df["station_id"] = i["STID"]
-
-    return df
+with ui.sidebar():
+    ui.input_slider("time", "Time (days)", 1, 30, 3)
+    # ui.input_select("station", "Weather Station", choices=station_ids)
+    # ui.input_selectize("snotel_station", "SNOTEL Station", choices=snotel_sites, selected="366:UT:SNTL", multiple=True)
+    ui.markdown("## Forecast Issued:")
+    forecast["date_issued"]
+    ui.span()
+    ui.tags.img(
+        src=f"https://utahavalanchecenter.org/{forecast['overall_danger_rose_image']}"
+    )
 
 
 @reactive.Calc
 def wx_data() -> pd.DataFrame:
-    url = "https://api.synopticdata.com/v2/stations/timeseries"
-
-    resp = requests.get(
-        url,
-        params={
-            "token": os.getenv("SYNOPTIC_TOKEN"),  # access token
-            "stid": list(station_ids.keys()),  # mesonet station ids
-            "recent": input.time() * 24 * 60,  # time in minutes
-        },
-    )
-
-    j = resp.json()
-    df = pd.concat((get_station_series(x) for x in j["STATION"]))
-    df["date_time"] = pd.to_datetime(df["date_time"]).dt.tz_convert(tz="America/Denver")
-
-    return df
+    return wx_raw[
+        wx_raw.date_time
+        > pd.Timestamp.now(tz="America/Denver") - pd.Timedelta(days=input.time())
+    ]
 
 
 @reactive.calc
 def snotel_data() -> pd.DataFrame:
-    client = zeep.Client("https://wcc.sc.egov.usda.gov/awdbWebService/services?WSDL")
-    current_time = pd.Timestamp.now(tz="America/Denver")
-
-    df = get_snotel_data(
-        client,
-        site_codes=list(snotel_sites.keys()),
-        sensor_codes=list(snotel_sensors.keys()),
-        start_date=(current_time - pd.Timedelta(days=input.time())).strftime(
-            "%Y-%m-%d %H:00:00"
-        ),
-        end_date=current_time.strftime("%Y-%m-%d %H:00:00"),
-    ).reset_index()
-
-    df["siteName"] = df["siteCode"].replace(snotel_sites)
-    df = df.reset_index()
-    return df
+    return snotel_raw[
+        snotel_raw.dateTime
+        > pd.Timestamp.now(tz="America/Denver") - pd.Timedelta(days=input.time())
+    ]
 
 
 def create_windrose(df):
@@ -185,13 +111,6 @@ def create_windrose(df):
 
 
 ## UI/UX
-
-with ui.sidebar():
-    ui.input_slider("time", "Time (days)", 1, 30, 3)
-    # ui.input_select("station", "Weather Station", choices=station_ids)
-    # ui.input_selectize("snotel_station", "SNOTEL Station", choices=snotel_sites, selected="366:UT:SNTL", multiple=True)
-    ui.markdown("## Forecast Issued:")
-    forecast_data()["date_issued"]
 
 with ui.nav_panel(title="BCC"):
     with ui.layout_columns(fill=False, height="300px"):
@@ -383,13 +302,3 @@ with ui.nav_panel(title="LCC"):
                     yaxis_title="Air Temp (deg F)", xaxis_title=None, legend_title=None
                 )
                 return fig
-
-
-# with ui.navset_card_underline(title="SNOTEL Data"):
-#     for id, name in snotel_sensors.items():
-#         with ui.nav_panel(name):
-#             @render_plotly
-#             def viz():
-#                 df = snotel_data()
-#                 fig = px.line(df, x="dateTime", y=id, color="siteName")
-#                 return fig
