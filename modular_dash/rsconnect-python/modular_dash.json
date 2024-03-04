@@ -1,0 +1,12 @@
+{
+    "https://colorado.posit.co/rsc/": {
+        "server_url": "https://colorado.posit.co/rsc/",
+        "filename": "/Users/nickp/personal/dash4pow/modular_dash",
+        "app_url": "https://colorado.posit.co/rsc/content/4fdba2ce-627d-497f-991e-40639473418f/",
+        "app_id": "4fdba2ce-627d-497f-991e-40639473418f",
+        "app_guid": "4fdba2ce-627d-497f-991e-40639473418f",
+        "title": "Dash4Pow v2",
+        "app_mode": "python-shiny",
+        "app_store_version": 1
+    }
+}

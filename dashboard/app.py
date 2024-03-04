@@ -55,7 +55,7 @@ def wx_data() -> pd.DataFrame:
     ]
 
 
-@reactive.calc
+@reactive.Calc
 def snotel_data() -> pd.DataFrame:
     return snotel_raw[
         snotel_raw.dateTime
